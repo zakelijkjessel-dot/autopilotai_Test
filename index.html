@@ -1373,7 +1373,6 @@ function initParticles() {
   let W, H;
 
   function resize() {
-    const rect = canvas.parentElement.getBoundingClientRect();
     W = canvas.width = canvas.offsetWidth;
     H = canvas.height = canvas.offsetHeight;
     particles = Array.from({ length: 420 }, () => createParticle());
@@ -1556,7 +1555,7 @@ function startChatAnimation() {
 
   function runChat() {
     let totalDelay = 600;
-    messages.forEach((msg, idx) => {
+    messages.forEach((msg) => {
       // Show typing
       setTimeout(() => {
         typing.classList.add('shown');
