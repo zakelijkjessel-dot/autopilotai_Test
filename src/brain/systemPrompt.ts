@@ -1,5 +1,6 @@
 import { GarageConfig } from '../config/garage';
-import { formatEuro } from '../util/format';
+import { estimatePrice } from '../domain/pricing';
+import { formatPriceRange } from '../util/format';
 
 const WEEKDAYS_NL = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
 
@@ -15,10 +16,10 @@ function openingHoursText(config: GarageConfig): string {
 
 function servicesText(config: GarageConfig): string {
   return config.services
-    .map(
-      (s) =>
-        `- ${s.name} (id: ${s.id}) — vanaf ${formatEuro(s.basePrice)}, ± ${s.baseDurationMin} min. ${s.description}`,
-    )
+    .map((s) => {
+      const est = estimatePrice(config, s);
+      return `- ${s.name} (id: ${s.id}) — richtprijs ${formatPriceRange(est.low, est.high)}, ± ${s.baseDurationMin} min. ${s.description}`;
+    })
     .join('\n');
 }
 
