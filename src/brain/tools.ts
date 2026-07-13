@@ -221,9 +221,15 @@ async function bookAppointment(input: Record<string, unknown>, ctx: ToolContext)
   ctx.store.saveSession(ctx.session);
 
   let emailed = false;
+  let emailFailed = false;
   if (email) {
-    await ctx.email.send(buildConfirmationEmail(ctx.config, appt, service.name));
-    emailed = true;
+    try {
+      await ctx.email.send(buildConfirmationEmail(ctx.config, appt, service.name));
+      emailed = true;
+    } catch (err) {
+      emailFailed = true;
+      console.error('[email] versturen van bevestiging mislukt:', err);
+    }
   }
 
   return ok({
@@ -234,7 +240,11 @@ async function bookAppointment(input: Record<string, unknown>, ctx: ToolContext)
     duration_min: durationMin,
     price_range: formatPriceRange(est.low, est.high),
     email_sent: emailed,
-    note: emailed ? undefined : 'Nog geen e-mailadres bekend — vraag dit als de klant een bevestiging per mail wil.',
+    note: emailed
+      ? undefined
+      : emailFailed
+        ? 'De bevestigingsmail kon niet verstuurd worden; de afspraak staat wél vast. Bied eventueel aan de bevestiging later te sturen.'
+        : 'Nog geen e-mailadres bekend — vraag dit als de klant een bevestiging per mail wil.',
   });
 }
 

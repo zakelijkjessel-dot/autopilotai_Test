@@ -57,9 +57,20 @@ Railway draait je bot 24/7 op een vast adres en leest de code direct uit GitHub.
    | `TWILIO_ACCOUNT_SID` | je Account SID uit Deel 1 |
    | `TWILIO_AUTH_TOKEN` | je Auth Token uit Deel 1 |
    | `TWILIO_WHATSAPP_FROM` | `whatsapp:+14155238886` (jouw sandbox-nummer) |
+   | `SMTP_HOST` | `smtp.gmail.com` — *optioneel, voor echte e-mailbevestiging* |
+   | `SMTP_PORT` | `465` |
+   | `SMTP_USER` | je e-mailadres (bv. je Gmail) |
+   | `SMTP_PASS` | je **Gmail App-wachtwoord** (zie kader hieronder) |
+   | `SMTP_FROM` | bv. `Garage De Vrij <jouwmail@gmail.com>` (optioneel) |
    | `TZ` | `Europe/Amsterdam` |
 
    > `PORT` hoef je niet te zetten — dat regelt Railway zelf.
+   >
+   > 📧 **E-mail is optioneel:** laat je de `SMTP_*`-velden leeg, dan draait de
+   > bot gewoon door, maar bevestigingen worden alleen gelogd (niet verstuurd).
+   > Voor een **Gmail App-wachtwoord**: zet 2-stapsverificatie aan en maak er een
+   > aan op https://myaccount.google.com/apppasswords — gebruik dát (niet je
+   > gewone wachtwoord) als `SMTP_PASS`.
 
 5. Maak het bot-adres openbaar: **Settings → Networking → Generate Domain**.
    Je krijgt een adres als `https://autopilotai-test-production.up.railway.app`.

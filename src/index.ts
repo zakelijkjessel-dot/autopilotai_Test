@@ -4,12 +4,34 @@ import Anthropic from '@anthropic-ai/sdk';
 import { garageConfig } from './config/garage';
 import { Store } from './store/store';
 import { MemoryCalendar } from './calendar/memoryCalendar';
+import { Email } from './email/email';
 import { ConsoleEmail } from './email/consoleEmail';
+import { SmtpEmail } from './email/smtpEmail';
 import { Brain } from './brain/brain';
 import { Channel, MessageHandler } from './channel/channel';
 import { SimulatorChannel } from './channel/simulator';
 import { TwilioChannel } from './channel/twilio';
 import { startReminderScheduler } from './scheduler/reminders';
+
+/** Kiest de e-mailverzender: echt via SMTP als dat is ingesteld, anders console. */
+async function createEmail(): Promise<Email> {
+  if (!process.env.SMTP_HOST) {
+    console.log('ℹ️  E-mail: simulatiemodus (console). Stel SMTP_* in voor echte verzending.');
+    return new ConsoleEmail();
+  }
+  const smtp = new SmtpEmail();
+  try {
+    await smtp.verify();
+    console.log('✅ E-mail: SMTP-verbinding OK — bevestigingen worden echt verstuurd.');
+  } catch (err) {
+    console.error(
+      '⚠️  E-mail: SMTP-verbinding mislukt. Controleer je SMTP_*-instellingen; ' +
+        'bevestigingen worden mogelijk niet verstuurd.\n',
+      err,
+    );
+  }
+  return smtp;
+}
 
 async function main(): Promise<void> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -27,7 +49,7 @@ async function main(): Promise<void> {
   const store = new Store();
   await store.load();
   const calendar = new MemoryCalendar(garageConfig, store);
-  const email = new ConsoleEmail();
+  const email = await createEmail();
   const brain = new Brain({ client, config: garageConfig, calendar, store, email });
 
   // Kies het kanaal (simulator standaard, twilio voor echte WhatsApp).
