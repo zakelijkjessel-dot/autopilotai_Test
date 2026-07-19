@@ -7,6 +7,7 @@ import { Appointment } from '../domain/types';
 import { estimatePrice } from '../domain/pricing';
 import { estimateWorkshopTime } from '../domain/timeEstimate';
 import { formatDateTimeNL, formatPriceRange } from '../util/format';
+import { lookupVehicle } from '../integrations/rdw';
 
 /** Alles wat de tool-uitvoerders nodig hebben. */
 export interface ToolContext {
@@ -106,6 +107,18 @@ export const tools: Anthropic.Tool[] = [
       required: ['appointment_id', 'new_start'],
     },
   },
+  {
+    name: 'lookup_license_plate',
+    description:
+      'Zoek voertuiggegevens (merk, model, kleur, APK-vervaldatum) op bij de RDW aan de hand van een Nederlands kenteken. Handig tijdens de intake om merk/type automatisch te bepalen en te zien wanneer de APK verloopt.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        license_plate: { type: 'string', description: 'Nederlands kenteken, bv. "AB-123-C" of "AB123C".' },
+      },
+      required: ['license_plate'],
+    },
+  },
 ];
 
 /** Voer een tool uit en geef een (JSON-)string terug die naar Claude gaat. */
@@ -127,6 +140,8 @@ export async function executeTool(
       return cancelAppointment(input, ctx);
     case 'reschedule_appointment':
       return rescheduleAppointment(input, ctx);
+    case 'lookup_license_plate':
+      return lookupLicensePlate(input);
     default:
       return ok({ error: `Onbekende tool: ${name}` });
   }
@@ -291,6 +306,17 @@ function rescheduleAppointment(input: Record<string, unknown>, ctx: ToolContext)
 
   ctx.store.updateAppointment(id, { status: 'booked', start: newStart, reminderSent: false });
   return ok({ rescheduled: true, appointment_id: id, when: formatDateTimeNL(newStart) });
+}
+
+async function lookupLicensePlate(input: Record<string, unknown>): Promise<string> {
+  const plate = asString(input.license_plate);
+  if (!plate) return ok({ error: 'Geen kenteken opgegeven.' });
+
+  const vehicle = await lookupVehicle(plate);
+  if (!vehicle) {
+    return ok({ found: false, message: 'Geen voertuig gevonden bij de RDW voor dit kenteken.' });
+  }
+  return ok({ found: true, vehicle });
 }
 
 // ----- Hulpfuncties -----

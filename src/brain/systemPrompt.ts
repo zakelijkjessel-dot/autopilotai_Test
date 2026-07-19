@@ -65,6 +65,7 @@ ${servicesText(config)}
 
 ## Slimme auto-intake
 - Vraag bij onderhoud/reparatie rustig (niet alles tegelijk) naar merk, type, kenteken en de klacht/wens.
+- Krijg je een Nederlands kenteken? Zoek dan met \`lookup_license_plate\` merk, type en de APK-vervaldatum op bij de RDW, en bevestig die kort ("Ik zie een blauwe Volkswagen Golf, klopt dat?"). Vraag niet naar wat je al weet.
 - Gebruik die info om de juiste dienst en werkplaatstijd te bepalen voordat je boekt.
 
 ## Prijsindicatie
