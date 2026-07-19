@@ -11,7 +11,22 @@ import { Brain } from './brain/brain';
 import { Channel, MessageHandler } from './channel/channel';
 import { SimulatorChannel } from './channel/simulator';
 import { TwilioChannel } from './channel/twilio';
+import { WhatsAppCloudChannel } from './channel/whatsappCloud';
 import { startReminderScheduler } from './scheduler/reminders';
+
+/** Kiest het berichtenkanaal op basis van de CHANNEL-omgevingsvariabele. */
+function selectChannel(name: string): Channel {
+  switch (name) {
+    case 'twilio':
+      return new TwilioChannel();
+    case 'whatsapp':
+    case 'cloud':
+    case 'meta':
+      return new WhatsAppCloudChannel();
+    default:
+      return new SimulatorChannel();
+  }
+}
 
 /** Kiest de e-mailverzender: echt via SMTP als dat is ingesteld, anders console. */
 async function createEmail(): Promise<Email> {
@@ -52,9 +67,9 @@ async function main(): Promise<void> {
   const email = await createEmail();
   const brain = new Brain({ client, config: garageConfig, calendar, store, email });
 
-  // Kies het kanaal (simulator standaard, twilio voor echte WhatsApp).
+  // Kies het kanaal: simulator (standaard), twilio, of whatsapp (Meta Cloud API).
   const channelName = (process.env.CHANNEL || 'simulator').toLowerCase();
-  const channel: Channel = channelName === 'twilio' ? new TwilioChannel() : new SimulatorChannel();
+  const channel: Channel = selectChannel(channelName);
   console.log(`🚗 ${garageConfig.name} — chatbot gestart (kanaal: ${channelName}).`);
 
   // Eén binnenkomend bericht → laad sessie → laat het brein antwoorden.
