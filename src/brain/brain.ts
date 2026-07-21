@@ -4,6 +4,7 @@ import { Calendar } from '../calendar/calendar';
 import { Email } from '../email/email';
 import { Store, Session } from '../store/store';
 import { UserContent } from '../domain/types';
+import { GoogleCalendarSync } from '../integrations/googleCalendar';
 import { buildSystemPrompt } from './systemPrompt';
 import { tools, executeTool, ToolContext } from './tools';
 
@@ -18,6 +19,8 @@ export interface BrainDeps {
   calendar: Calendar;
   store: Store;
   email: Email;
+  /** Optionele spiegeling van afspraken naar Google Calendar. */
+  calendarSync?: GoogleCalendarSync | null;
 }
 
 /** Het "brein": vertaalt een binnenkomend bericht naar een antwoord, met tools. */
@@ -37,6 +40,7 @@ export class Brain {
       calendar: this.deps.calendar,
       store: this.deps.store,
       email: this.deps.email,
+      calendarSync: this.deps.calendarSync,
       session,
     };
 

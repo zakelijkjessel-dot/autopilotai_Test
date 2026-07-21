@@ -8,6 +8,7 @@ import { estimatePrice } from '../domain/pricing';
 import { estimateWorkshopTime } from '../domain/timeEstimate';
 import { formatDateTimeNL, formatPriceRange } from '../util/format';
 import { lookupVehicle } from '../integrations/rdw';
+import { GoogleCalendarSync } from '../integrations/googleCalendar';
 
 /** Alles wat de tool-uitvoerders nodig hebben. */
 export interface ToolContext {
@@ -15,6 +16,8 @@ export interface ToolContext {
   calendar: Calendar;
   store: Store;
   email: Email;
+  /** Optionele spiegeling naar Google Calendar (null = niet gekoppeld). */
+  calendarSync?: GoogleCalendarSync | null;
   /** Sessie van de huidige klant (id = telefoonnummer / WhatsApp-id). */
   session: Session;
 }
@@ -235,6 +238,16 @@ async function bookAppointment(input: Record<string, unknown>, ctx: ToolContext)
   ctx.store.addAppointment(appt);
   ctx.store.saveSession(ctx.session);
 
+  // Spiegel naar Google Calendar (indien gekoppeld); faalt nooit hard.
+  if (ctx.calendarSync) {
+    try {
+      const eventId = await ctx.calendarSync.createEvent(appt, service.name);
+      if (eventId) ctx.store.updateAppointment(appt.id, { googleEventId: eventId });
+    } catch (err) {
+      console.error('[google-calendar] spiegelen bij boeken mislukt:', err);
+    }
+  }
+
   let emailed = false;
   let emailFailed = false;
   if (email) {
@@ -275,7 +288,7 @@ function findAppointments(ctx: ToolContext): string {
   });
 }
 
-function cancelAppointment(input: Record<string, unknown>, ctx: ToolContext): string {
+async function cancelAppointment(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
   const id = String(input.appointment_id ?? '');
   const appt = ctx.store.getAppointment(id);
   if (!appt || appt.customer.phone !== ctx.session.id) {
@@ -284,10 +297,17 @@ function cancelAppointment(input: Record<string, unknown>, ctx: ToolContext): st
   if (appt.status === 'cancelled') return ok({ error: 'Deze afspraak is al geannuleerd.' });
 
   ctx.store.updateAppointment(id, { status: 'cancelled' });
+  if (appt.googleEventId && ctx.calendarSync) {
+    try {
+      await ctx.calendarSync.deleteEvent(appt.googleEventId);
+    } catch (err) {
+      console.error('[google-calendar] verwijderen bij annuleren mislukt:', err);
+    }
+  }
   return ok({ cancelled: true, appointment_id: id, when: formatDateTimeNL(appt.start) });
 }
 
-function rescheduleAppointment(input: Record<string, unknown>, ctx: ToolContext): string {
+async function rescheduleAppointment(input: Record<string, unknown>, ctx: ToolContext): Promise<string> {
   const id = String(input.appointment_id ?? '');
   const appt = ctx.store.getAppointment(id);
   if (!appt || appt.customer.phone !== ctx.session.id) {
@@ -305,6 +325,13 @@ function rescheduleAppointment(input: Record<string, unknown>, ctx: ToolContext)
   }
 
   ctx.store.updateAppointment(id, { status: 'booked', start: newStart, reminderSent: false });
+  if (appt.googleEventId && ctx.calendarSync) {
+    try {
+      await ctx.calendarSync.updateEvent(appt, serviceName(ctx, appt.serviceId));
+    } catch (err) {
+      console.error('[google-calendar] bijwerken bij verzetten mislukt:', err);
+    }
+  }
   return ok({ rescheduled: true, appointment_id: id, when: formatDateTimeNL(newStart) });
 }
 

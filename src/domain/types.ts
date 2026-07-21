@@ -52,6 +52,8 @@ export interface Appointment {
   createdAt: string;
   /** Is er al een herinnering gestuurd? Voorkomt dubbele reminders. */
   reminderSent?: boolean;
+  /** Id van het gespiegelde event in Google Calendar (indien gekoppeld). */
+  googleEventId?: string;
 }
 
 /** Een vrij tijdslot in de agenda. */

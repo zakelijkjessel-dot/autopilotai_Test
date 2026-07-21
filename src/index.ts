@@ -8,6 +8,7 @@ import { Email } from './email/email';
 import { ConsoleEmail } from './email/consoleEmail';
 import { SmtpEmail } from './email/smtpEmail';
 import { Brain } from './brain/brain';
+import { createGoogleCalendarSync } from './integrations/googleCalendar';
 import { Channel, MessageHandler } from './channel/channel';
 import { SimulatorChannel } from './channel/simulator';
 import { TwilioChannel } from './channel/twilio';
@@ -65,7 +66,8 @@ async function main(): Promise<void> {
   await store.load();
   const calendar = new MemoryCalendar(garageConfig, store);
   const email = await createEmail();
-  const brain = new Brain({ client, config: garageConfig, calendar, store, email });
+  const calendarSync = createGoogleCalendarSync(garageConfig);
+  const brain = new Brain({ client, config: garageConfig, calendar, store, email, calendarSync });
 
   // Kies het kanaal: simulator (standaard), twilio, of whatsapp (Meta Cloud API).
   const channelName = (process.env.CHANNEL || 'simulator').toLowerCase();
