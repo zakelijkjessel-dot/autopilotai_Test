@@ -20,8 +20,14 @@ bot zonder inlogscherm in de agenda mag schrijven. Reken op ±15 minuten.
 
 ## Stap 2 — Service-account + sleutel maken
 
-4. Ga naar **APIs & Services → Credentials** (of zoek "Service Accounts").
-5. Klik **Create credentials → Service account** → geef een naam → **Create and continue** → **Done**.
+> ℹ️ Kom je een scherm **"Google Auth Platform"** of **"OAuth consent screen"**
+> tegen (met Internal/External)? Dat heb je **niet** nodig — dat is voor
+> "Inloggen met Google". Sla het over en ga direct naar Service Accounts.
+
+4. Typ bovenin in de **zoekbalk** het woord **"Service accounts"** en open
+   **Service Accounts** (onder IAM & Admin).
+5. Klik **+ Create service account** → geef een naam (bv. "garage-bot") →
+   **Create and continue** → de rechten mag je overslaan → **Done**.
 6. Klik op de nieuwe service-account → tabblad **Keys** → **Add key → Create new key → JSON** → **Create**.
    Er wordt een **JSON-bestand** gedownload. Open dat; je hebt hieruit twee dingen nodig:
    - `client_email` (iets als `garage-bot@...gserviceaccount.com`)
