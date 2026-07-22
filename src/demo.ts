@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import { garageConfig } from './config/garage';
-import { Store } from './store/store';
+import { Store, FilePersistence } from './store/store';
 import { MemoryCalendar } from './calendar/memoryCalendar';
 import { ConsoleEmail } from './email/consoleEmail';
 import { Brain } from './brain/brain';
@@ -42,7 +42,7 @@ async function main(): Promise<void> {
 
   // Aparte, schone opslag voor de demo (vervuilt je echte data/ niet).
   const dataDir = path.join(os.tmpdir(), `garage-demo-${Date.now()}`);
-  const store = new Store(dataDir);
+  const store = new Store(new FilePersistence(dataDir));
   await store.load();
 
   const client = new Anthropic({ apiKey });

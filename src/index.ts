@@ -2,7 +2,8 @@ import './util/tz'; // ALLEREERST: laadt .env en zet de tijdzone.
 
 import Anthropic from '@anthropic-ai/sdk';
 import { garageConfig } from './config/garage';
-import { Store } from './store/store';
+import { Store, FilePersistence, Persistence } from './store/store';
+import { SupabasePersistence } from './store/supabasePersistence';
 import { MemoryCalendar } from './calendar/memoryCalendar';
 import { Email } from './email/email';
 import { ConsoleEmail } from './email/consoleEmail';
@@ -27,6 +28,18 @@ function selectChannel(name: string): Channel {
     default:
       return new SimulatorChannel();
   }
+}
+
+/** Kiest de opslag: Supabase als dat is ingesteld, anders een lokaal bestand. */
+function createPersistence(): Persistence {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && key) {
+    console.log('✅ Opslag: Supabase (afspraken blijven bewaard na een herstart/deploy).');
+    return new SupabasePersistence(url, key);
+  }
+  console.log('ℹ️  Opslag: lokaal bestand (data/db.json). Stel SUPABASE_* in voor een database.');
+  return new FilePersistence();
 }
 
 /** Kiest de e-mailverzender: echt via SMTP als dat is ingesteld, anders console. */
@@ -62,7 +75,7 @@ async function main(): Promise<void> {
 
   // Kern-onderdelen opzetten.
   const client = new Anthropic({ apiKey });
-  const store = new Store();
+  const store = new Store(createPersistence());
   await store.load();
   const calendar = new MemoryCalendar(garageConfig, store);
   const email = await createEmail();

@@ -11,37 +11,38 @@ export interface Session {
   history: Anthropic.MessageParam[];
 }
 
-interface DbShape {
+export interface DbShape {
   appointments: Appointment[];
   sessions: Record<string, Session>;
 }
 
 /**
- * Eenvoudige opslag in een JSON-bestand. Genoeg voor ontwikkeling en demo's.
- * Voor productie vervang je dit door bv. PostgreSQL achter dezelfde methodes.
+ * Waar de gegevens bewaard worden. De bot houdt alles in geheugen; deze laag
+ * laadt bij het opstarten en bewaart bij wijzigingen. Standaard een JSON-
+ * bestand; met Supabase een database (zelfde methodes, geen andere logica).
+ */
+export interface Persistence {
+  load(): Promise<DbShape>;
+  save(db: DbShape): Promise<void>;
+}
+
+/**
+ * Opslag met een pluggbare backend. De methodes zijn synchroon (werken op de
+ * kopie in geheugen); persistentie gebeurt gedebounced op de achtergrond.
  */
 export class Store {
   private db: DbShape = { appointments: [], sessions: {} };
-  private readonly file: string;
   private saveTimer: NodeJS.Timeout | null = null;
 
-  constructor(dataDir = path.resolve(process.cwd(), 'data')) {
-    this.file = path.join(dataDir, 'db.json');
-  }
+  constructor(private readonly persistence: Persistence = new FilePersistence()) {}
 
   async load(): Promise<void> {
-    try {
-      const raw = await fs.readFile(this.file, 'utf8');
-      this.db = JSON.parse(raw);
-      this.db.appointments ||= [];
-      this.db.sessions ||= {};
-    } catch {
-      // Nog geen bestand: begin leeg.
-      this.db = { appointments: [], sessions: {} };
-    }
+    this.db = await this.persistence.load();
+    this.db.appointments ||= [];
+    this.db.sessions ||= {};
   }
 
-  /** Sla op (gedebounced) zodat we niet bij elk bericht naar schijf schrijven. */
+  /** Sla op (gedebounced) zodat we niet bij elke wijziging naar de backend schrijven. */
   private scheduleSave(): void {
     if (this.saveTimer) return;
     this.saveTimer = setTimeout(() => {
@@ -51,8 +52,11 @@ export class Store {
   }
 
   async flush(): Promise<void> {
-    await fs.mkdir(path.dirname(this.file), { recursive: true });
-    await fs.writeFile(this.file, JSON.stringify(this.db, null, 2), 'utf8');
+    try {
+      await this.persistence.save(this.db);
+    } catch (err) {
+      console.error('[store] opslaan mislukt (gegevens blijven in geheugen):', err);
+    }
   }
 
   // ----- Afspraken -----
@@ -100,5 +104,28 @@ export class Store {
   saveSession(session: Session): void {
     this.db.sessions[session.id] = session;
     this.scheduleSave();
+  }
+}
+
+/** Standaardopslag: een lokaal JSON-bestand. Genoeg voor ontwikkeling en demo's. */
+export class FilePersistence implements Persistence {
+  private readonly file: string;
+
+  constructor(dataDir = path.resolve(process.cwd(), 'data')) {
+    this.file = path.join(dataDir, 'db.json');
+  }
+
+  async load(): Promise<DbShape> {
+    try {
+      const raw = await fs.readFile(this.file, 'utf8');
+      return JSON.parse(raw) as DbShape;
+    } catch {
+      return { appointments: [], sessions: {} };
+    }
+  }
+
+  async save(db: DbShape): Promise<void> {
+    await fs.mkdir(path.dirname(this.file), { recursive: true });
+    await fs.writeFile(this.file, JSON.stringify(db, null, 2), 'utf8');
   }
 }
